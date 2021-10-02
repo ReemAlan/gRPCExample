@@ -1,0 +1,50 @@
+﻿@page "/"
+
+@inject Greeter.GreeterClient GreeterClient
+@inject People.PeopleClient PeopleClient
+
+<PageTitle>Index</PageTitle>
+
+<h1>Hello, world!</h1>
+
+<h5>@GrpcResponse</h5>
+
+Welcome to your new app.
+
+@if (People == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var person in People)
+            {
+                <tr>
+                    <td>@person.Id</td>
+                    <td>@person.FirstName</td>
+                    <td>@person.LastName</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    public string? GrpcResponse { get; set; }
+    public List<PeopleResponse.Types.Person>? People { get; set; }
+
+    protected override async Task OnInitializedAsync() 
+    {
+        GrpcResponse = (await GreeterClient.SayHelloAsync(new HelloRequest { Name = "Reem" })).Message;
+        People = (await PeopleClient.GetPeopleAsync(new Empty())).People.ToList();
+    }
+}
