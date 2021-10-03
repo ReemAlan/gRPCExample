@@ -16,10 +16,37 @@ public class PeopleService : People.PeopleBase
     public override Task<PeopleResponse> GetPeople(Empty request, ServerCallContext context)
     {
         PeopleResponse response = new PeopleResponse();
-        response.People.Add(new PeopleResponse.Types.Person { Id = 1, FirstName = "first name 1", LastName = "last name 1" });
-        response.People.Add(new PeopleResponse.Types.Person { Id = 2, FirstName = "first name 2", LastName = "last name 2" });
-        response.People.Add(new PeopleResponse.Types.Person { Id = 3, FirstName = "first name 3", LastName = "last name 3" });
+        response.People.Add(new Person { Id = 1, FirstName = "first name 1", LastName = "last name 1" });
+        response.People.Add(new Person { Id = 2, FirstName = "first name 2", LastName = "last name 2" });
+        response.People.Add(new Person { Id = 3, FirstName = "first name 3", LastName = "last name 3" });
 
         return Task.FromResult(response);
+    }
+
+    public override async Task GetPeopleStream(Empty _, IServerStreamWriter<Person> responseStream, ServerCallContext context)
+    {
+        int i = 1;
+        while (!context.CancellationToken.IsCancellationRequested)
+        {
+            await Task.Delay(1000);
+            
+            var person = new Person
+            {
+                Id = i,
+                FirstName = $"first name {i}",
+                LastName = $"last name {i}"
+            };
+
+            try
+            {
+                _logger.LogInformation("Sending Person response");
+                await responseStream.WriteAsync(person);
+                i++;
+            }
+            catch (InvalidOperationException e)
+            {
+                _logger.LogInformation($"{e.Message}\n     Request has been cancelled by the client.");
+            }
+        }
     }
 }

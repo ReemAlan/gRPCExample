@@ -7,6 +7,7 @@
 
 <h1>Hello, world!</h1>
 
+<h3>Regular gRPC Messages</h3> 
 <h5>@GrpcResponse</h5>
 
 Welcome to your new app.
@@ -38,13 +39,49 @@ else
     </table>
 }
 
+<h3>Streaming gRPC Messages</h3> 
+
+<ul>
+    @foreach (var person in PeopleStream)
+    {
+        <li>@person</li>
+    }
+</ul>
+
 @code {
     public string? GrpcResponse { get; set; }
-    public List<PeopleResponse.Types.Person>? People { get; set; }
+    public List<Person>? People { get; set; }
+    public List<string> PeopleStream { get; set; } = new();
 
-    protected override async Task OnInitializedAsync() 
+    protected override async Task OnInitializedAsync()
     {
         GrpcResponse = (await GreeterClient.SayHelloAsync(new HelloRequest { Name = "Reem" })).Message;
         People = (await PeopleClient.GetPeopleAsync(new Empty())).People.ToList();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) 
+    {
+        Console.WriteLine("Entered OnAfterRenderAsync with firstRender={0}", firstRender);
+        if (firstRender)
+        {
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(9));
+            using var streamingCall = PeopleClient.GetPeopleStream(new Empty(), cancellationToken: cts.Token);
+            try
+            {
+                await foreach (var person in streamingCall.ResponseStream.ReadAllAsync(cancellationToken: cts.Token))
+                {
+                    PeopleStream.Add($"{person.Id} | {person.FirstName} | {person.LastName}");
+                    Console.WriteLine($"{person.Id} | {person.FirstName} | {person.LastName}");
+                }
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
+            {               
+                PeopleStream.Add("Request cancelled.");
+            }
+            finally
+            {
+                StateHasChanged();
+            }
+        }
     }
 }
