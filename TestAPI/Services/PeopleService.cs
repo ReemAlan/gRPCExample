@@ -50,6 +50,18 @@ public class PeopleService : People.PeopleBase
         }
     }
 
+    public override Task<List<Person>> GetPeople(IAsyncStreamReader<StreamerClientRequest> requestStream, ServerCallContext context)
+    {
+        List<Person> response = new();
+        while (await requestStream.MoveNext() && !context.CancellationToken.IsCancellationRequested)
+        {
+            int start = requestStream.Current.Start;
+            response.Add(new Person { Id = start, FirstName = $"Client stream first {start}", LastName = $"Client stream last {start}"});
+        }
+        
+        return Task.FromResult(response);
+    }
+
     public override async Task GetPeopleStreamers(IAsyncStreamReader<StreamerClientRequest> requestStream, 
         IServerStreamWriter<Person> responseStream, 
         ServerCallContext context)
@@ -63,7 +75,7 @@ public class PeopleService : People.PeopleBase
                 int start = await requestStream.MoveNext() ? requestStream.Current.Start: 100;
                 for (int i = start; i <= i+3; i++)
                 {
-                    await responseStream.WriteAsync(new Person { Id = i, FirstName = $"Reem {i}", LastName = $"Alansary {i}"});
+                    await responseStream.WriteAsync(new Person { Id = i, FirstName = $"First {i}", LastName = $"Last {i}"});
                     _logger.LogInformation($"Sent {i} person/people");
                 }
             }

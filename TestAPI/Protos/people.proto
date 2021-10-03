@@ -10,6 +10,7 @@ service People {
     // gets a collection of people
     rpc GetPeople (google.protobuf.Empty) returns (PeopleResponse);
     rpc GetPeopleStream (google.protobuf.Empty) returns (stream Person);
+    rpc GetPerson (stream StreamerClientRequest) returns (stream Person);
     rpc GetPeopleStreamers (stream StreamerClientRequest) returns (stream Person);
 }
 
