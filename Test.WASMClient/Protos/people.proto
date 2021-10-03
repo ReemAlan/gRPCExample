@@ -10,6 +10,7 @@ service People {
     // gets a collection of people
     rpc GetPeople (google.protobuf.Empty) returns (PeopleResponse);
     rpc GetPeopleStream (google.protobuf.Empty) returns (stream Person);
+    rpc GetPeopleStreamers (stream StreamerClientRequest) returns (stream Person);
 }
 
 message PeopleResponse {
@@ -20,4 +21,8 @@ message Person {
     int32 id = 1;
     string first_name = 2;
     string last_name = 3;
+}
+
+message StreamerClientRequest {
+    int32 start = 1;
 }

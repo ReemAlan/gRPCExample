@@ -49,4 +49,28 @@ public class PeopleService : People.PeopleBase
             }
         }
     }
+
+    public override async Task GetPeopleStreamers(IAsyncStreamReader<StreamerClientRequest> requestStream, 
+        IServerStreamWriter<Person> responseStream, 
+        ServerCallContext context)
+    {
+        _logger.LogInformation("About to start streaming from server..");
+
+        while (!context.CancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                int start = await requestStream.MoveNext() ? requestStream.Current.Start: 100;
+                for (int i = start; i <= i+3; i++)
+                {
+                    await responseStream.WriteAsync(new Person { Id = i, FirstName = $"Reem {i}", LastName = $"Alansary {i}"});
+                    _logger.LogInformation($"Sent {i} person/people");
+                }
+            }
+            catch (InvalidOperationException e)
+            {
+                _logger.LogInformation($"{e.Message}\n\tRequest has been cancelled by the client.");
+            }
+        }
+    }
 }

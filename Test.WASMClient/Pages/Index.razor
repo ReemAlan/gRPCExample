@@ -39,10 +39,19 @@ else
     </table>
 }
 
-<h3>Streaming gRPC Messages</h3> 
+<h3>Streaming Server gRPC Messages</h3> 
 
 <ul>
     @foreach (var person in PeopleStream)
+    {
+        <li>@person</li>
+    }
+</ul>
+
+<h3>Bi-directional Streaming gRPC Messages</h3> 
+
+<ul>
+    @foreach (var person in StreamBothWays)
     {
         <li>@person</li>
     }
@@ -52,6 +61,7 @@ else
     public string? GrpcResponse { get; set; }
     public List<Person>? People { get; set; }
     public List<string> PeopleStream { get; set; } = new();
+    public List<string> StreamBothWays { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -62,13 +72,15 @@ else
     protected override async Task OnAfterRenderAsync(bool firstRender) 
     {
         Console.WriteLine("Entered OnAfterRenderAsync with firstRender={0}", firstRender);
+
         if (firstRender)
         {
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(9));
-            using var streamingCall = PeopleClient.GetPeopleStream(new Empty(), cancellationToken: cts.Token);
+            @* Server streaming *@
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            using var streamingServerCall = PeopleClient.GetPeopleStream(new Empty(), cancellationToken: cts.Token);
             try
             {
-                await foreach (var person in streamingCall.ResponseStream.ReadAllAsync(cancellationToken: cts.Token))
+                await foreach (var person in streamingServerCall.ResponseStream.ReadAllAsync(cancellationToken: cts.Token))
                 {
                     PeopleStream.Add($"{person.Id} | {person.FirstName} | {person.LastName}");
                     Console.WriteLine($"{person.Id} | {person.FirstName} | {person.LastName}");
@@ -78,10 +90,32 @@ else
             {               
                 PeopleStream.Add("Request cancelled.");
             }
-            finally
+
+            @* Bi-directional streaming *@
+            var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var bidirectionalStreamingCall = PeopleClient.GetPeopleStreamers(cancellationToken: cts2.Token);
+            try
             {
-                StateHasChanged();
+                for (int i = 50; !cts2.Token.IsCancellationRequested; i++)
+                {
+                    Console.WriteLine("About to send first request to server");
+                    await bidirectionalStreamingCall.RequestStream.WriteAsync(new StreamerClientRequest { Start = i});
+                    @* while (await bidirectionalStreamingCall.ResponseStream.MoveNext())
+                    {
+                        Console.WriteLine("Here");
+                        Person p = bidirectionalStreamingCall.ResponseStream.Current;
+                        StreamBothWays.Add($"{p.Id} | {p.FirstName} | {p.LastName}");
+                    } *@
+
+                    Console.WriteLine(await bidirectionalStreamingCall.ResponseStream.MoveNext());
+                }
             }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
+            {
+                StreamBothWays.Add("Request cancelled 2.");
+            }
+
+            StateHasChanged();
         }
     }
 }
