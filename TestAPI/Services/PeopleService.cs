@@ -66,22 +66,21 @@ public class PeopleService : People.PeopleBase
         IServerStreamWriter<Person> responseStream, 
         ServerCallContext context)
     {
+        Console.WriteLine("Entered bidi streaming..");
         _logger.LogInformation("About to start streaming from server..");
 
         while (!context.CancellationToken.IsCancellationRequested)
         {
+            await Task.Delay(500);
+
             try
             {
                 int start = await requestStream.MoveNext() ? requestStream.Current.Start: 100;
-                for (int i = start; i <= i+3; i++)
-                {
-                    await responseStream.WriteAsync(new Person { Id = i, FirstName = $"First {i}", LastName = $"Last {i}"});
-                    _logger.LogInformation($"Sent {i} person/people");
-                }
+                await responseStream.WriteAsync(new Person { Id = start, FirstName = $"First {start}", LastName = $"Last {start}"});
             }
             catch (InvalidOperationException e)
             {
-                _logger.LogInformation($"{e.Message}\n\tRequest has been cancelled by the client.");
+                _logger.LogInformation($"{e.Message}\n\tRequest has been cancelled by the client. 2");
             }
         }
     }

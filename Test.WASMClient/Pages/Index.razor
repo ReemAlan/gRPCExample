@@ -125,19 +125,26 @@ else
             using var bidirectionalStreamingCall = PeopleClient.GetPeopleStreamers(cancellationToken: cts2.Token);
             try
             {
-                for (int i = 50; !cts2.Token.IsCancellationRequested; i++)
+                var readTask = Task.Run(async () =>
                 {
-                    Console.WriteLine("About to send first request to server");
-                    await bidirectionalStreamingCall.RequestStream.WriteAsync(new StreamerClientRequest { Start = i});
-                    while (await bidirectionalStreamingCall.ResponseStream.MoveNext())
+                    await foreach (var person in bidirectionalStreamingCall.ResponseStream.ReadAllAsync())
                     {
-                        Console.WriteLine("Here");
-                        Person p = bidirectionalStreamingCall.ResponseStream.Current;
-                        StreamBothWays.Add($"{p.Id} | {p.FirstName} | {p.LastName}");
+                        Console.WriteLine(person);
                     }
+                });
 
-                    Console.WriteLine(await bidirectionalStreamingCall.ResponseStream.MoveNext());
-                }
+                var writeTask = Task.Run(async () => 
+                {
+                    int count = 100;
+                    while (!cts2.IsCancellationRequested)
+                    {
+                        await Task.Delay(500);
+                        await bidirectionalStreamingCall.RequestStream.WriteAsync(new StreamerClientRequest { Start = count++ });
+                    }
+                    await bidirectionalStreamingCall.RequestStream.CompleteAsync();
+                });
+                
+                await Task.WhenAll(readTask, writeTask);
             }
             catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
             {
