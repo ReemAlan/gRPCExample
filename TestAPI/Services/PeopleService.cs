@@ -15,7 +15,7 @@ public class PeopleService : People.PeopleBase
 
     public override Task<PeopleResponse> GetPeople(Empty request, ServerCallContext context)
     {
-        PeopleResponse response = new PeopleResponse();
+        PeopleResponse response = new();
         response.People.Add(new Person { Id = 1, FirstName = "first name 1", LastName = "last name 1" });
         response.People.Add(new Person { Id = 2, FirstName = "first name 2", LastName = "last name 2" });
         response.People.Add(new Person { Id = 3, FirstName = "first name 3", LastName = "last name 3" });
@@ -23,7 +23,7 @@ public class PeopleService : People.PeopleBase
         return Task.FromResult(response);
     }
 
-    public override async Task GetPeopleStream(Empty _, IServerStreamWriter<Person> responseStream, ServerCallContext context)
+    public override async Task GetPeopleServerStream(Empty _, IServerStreamWriter<Person> responseStream, ServerCallContext context)
     {
         int i = 1;
         while (!context.CancellationToken.IsCancellationRequested)
@@ -50,16 +50,16 @@ public class PeopleService : People.PeopleBase
         }
     }
 
-    public override Task<List<Person>> GetPeople(IAsyncStreamReader<StreamerClientRequest> requestStream, ServerCallContext context)
+    public override async Task<PeopleResponse> GetPeopleClientStream(IAsyncStreamReader<StreamerClientRequest> requestStream, ServerCallContext context)
     {
-        List<Person> response = new();
+        PeopleResponse response = new();
         while (await requestStream.MoveNext() && !context.CancellationToken.IsCancellationRequested)
         {
-            int start = requestStream.Current.Start;
-            response.Add(new Person { Id = start, FirstName = $"Client stream first {start}", LastName = $"Client stream last {start}"});
+            int current = requestStream.Current.Start;
+            response.People.Add(new Person { Id = current, FirstName = $"first {current}", LastName = $"last {current}" });
         }
-        
-        return Task.FromResult(response);
+
+        return response;
     }
 
     public override async Task GetPeopleStreamers(IAsyncStreamReader<StreamerClientRequest> requestStream, 
