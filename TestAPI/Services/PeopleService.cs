@@ -45,7 +45,11 @@ public class PeopleService : People.PeopleBase
             }
             catch (InvalidOperationException e)
             {
-                _logger.LogInformation($"{e.Message}\n     Request has been cancelled by the client.");
+                _logger.LogInformation($"{e.Message}:\tRequest has been cancelled by the client.");
+            }
+            catch (Exception e)
+            {
+                _logger.LogInformation($"{e.Message}");
             }
         }
     }
@@ -66,22 +70,24 @@ public class PeopleService : People.PeopleBase
         IServerStreamWriter<Person> responseStream, 
         ServerCallContext context)
     {
-        Console.WriteLine("Entered bidi streaming..");
         _logger.LogInformation("About to start streaming from server..");
 
-        while (!context.CancellationToken.IsCancellationRequested)
+        try
         {
-            await Task.Delay(500);
-
-            try
+            while (!context.CancellationToken.IsCancellationRequested && await requestStream.MoveNext())
             {
-                int start = await requestStream.MoveNext() ? requestStream.Current.Start: 100;
-                await responseStream.WriteAsync(new Person { Id = start, FirstName = $"First {start}", LastName = $"Last {start}"});
-            }
-            catch (InvalidOperationException e)
-            {
-                _logger.LogInformation($"{e.Message}\n\tRequest has been cancelled by the client. 2");
+                int start = requestStream.Current.Start;
+                await responseStream.WriteAsync(new Person { Id = start, FirstName = $"First {start}", LastName = $"Last {start}"});            
             }
         }
+        catch (InvalidOperationException e)
+        {
+            _logger.LogInformation($"{e.Message}\tRequest has been cancelled by the client. 2");
+        }
+        catch (Exception e)
+        {
+            _logger.LogInformation($"{e.Message}");
+        }
+        
     }
 }
