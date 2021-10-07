@@ -121,6 +121,7 @@ else
             }
             
             @* Bi-directional streaming *@
+            @* Not supported *@
             var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             using var bidirectionalStreamingCall = PeopleClient.GetPeopleStreamers(cancellationToken: cts2.Token);
             Console.WriteLine("Opened communication with server");
