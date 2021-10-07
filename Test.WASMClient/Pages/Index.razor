@@ -73,6 +73,7 @@ else
     public string? GrpcResponse { get; set; }
     public List<Person>? People { get; set; }
     public List<string> PeopleStream { get; set; } = new();
+    public List<string> StreamBothWays { get; set; } = new();
     public List<Person>? ClientStreamPeople { get; set; }
 
     protected override async Task OnInitializedAsync()
