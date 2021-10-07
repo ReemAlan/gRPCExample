@@ -60,6 +60,15 @@ else
     }
 </ul>
 
+<h3>Bi-directional Streaming gRPC Messages</h3> 
+
+<ul>
+    @foreach (var person in StreamBothWays)
+    {
+        <li>@person</li>
+    }
+</ul>
+
 @code {
     public string? GrpcResponse { get; set; }
     public List<Person>? People { get; set; }
@@ -110,6 +119,38 @@ else
                 Console.WriteLine(e.Message);
             }
             
+            @* Bi-directional streaming *@
+            var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            using var bidirectionalStreamingCall = PeopleClient.GetPeopleStreamers(cancellationToken: cts2.Token);
+            Console.WriteLine("Opened communication with server");
+            try
+            {
+                var readTask = Task.Run(async () =>
+                {
+                    await foreach (var person in bidirectionalStreamingCall.ResponseStream.ReadAllAsync())
+                    {
+                        Console.WriteLine(person);
+                    }
+                });
+
+                var writeTask = Task.Run(async () => 
+                {
+                    int count = 100;
+                    while (!cts2.Token.IsCancellationRequested)
+                    {
+                        await bidirectionalStreamingCall.RequestStream.WriteAsync(new StreamerClientRequest { Start = count++ });
+                        await Task.Delay(500);
+                    }
+                    await bidirectionalStreamingCall.RequestStream.CompleteAsync();
+                });
+                
+                await Task.WhenAll(writeTask, readTask);
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
+            {
+                StreamBothWays.Add("Bidirectional request cancelled.");
+            }
+
             StateHasChanged();
         }
     }
